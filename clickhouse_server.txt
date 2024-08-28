@@ -1,1 +1,0 @@
-docker run -d --name local-clickhouse-server -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 --volume=Clickhouse_Database:/var/lib/clickhouse yandex/clickhouse-server
