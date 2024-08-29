@@ -10,6 +10,14 @@ from infi.clickhouse_orm.fields import (
     UInt64Field,
     LowCardinalityField,
 )
+from model import (
+    DepthSnapshot,
+    DiffDepthStreamDispatcher,
+    Logger,
+    LoggingLevel,
+    DiffDepthStream,
+    LoggingMsg,
+)
 from infi.clickhouse_orm.engines import MergeTree, ReplacingMergeTree
 from clickhouse_driver import Client
 
@@ -29,79 +37,19 @@ def main():
 
     client = Client(host=CONFIG.host_name)
     db = Database(database_name, db_url=f"http://{CONFIG.host_name}:8123/")
-    # for database in client.execute("SHOW DATABASES "):
-    #     print(database)
 
     client.execute(f"USE archive")
 
-    client.execute("INSERT INTO person VALUES ('Benny', 'Wu', '33', '179', '92')")
-    client.execute("INSERT INTO person VALUES ('Benny', 'Wu', '33', '179', '92')")
+    for table in client.execute("SHOW TABLES"):
+        print(table)
 
-    qs = (
-        Person.objects_in(db)
-        .filter(Person.first_name == "Benny")
-        .order_by(Person.height)
-    )
-    for benny in qs:
-        print(benny.first_name, benny.last_name, benny.age, benny.height, benny.weight)
+    cnt = DepthSnapshot.objects_in(db).count()
+    cnt2 = DiffDepthStream.objects_in(db).count()
+    cnt3 = LoggingMsg.objects_in(db).count()
 
-    # for benny in client.execute(qs.as_sql()):
-    #     print(benny)
-
-    # for benny in client.execute("SELECT * FROM person WHERE first_name = 'Benny'"):
-    #     print(benny)
-
-    # for table in client.execute(f"SHOW TABLES"):
-    #     print(table)
-
-    # for row in client.execute("SELECT * FROM person"):
-    #     print(row)
-
-    # client.execute(f"")
-
-    # db = Database(database_name, db_url=f"http://{CONFIG.host_name}:8123/")
-    # qs = Person.objects_in(db).filter(Person.age > 30).order_by("height")
-
-    # for row in client.execute(qs.as_sql()):
-    #     print(row)
-
-    # db.create_table(Person)
-    # db.insert(
-    #     [
-    #         Person(
-    #             first_name="Hallo", last_name="Q", age=44, height=185.0, weight=95.0
-    #         ),
-    #         Person(
-    #             first_name="Buffalo",
-    #             last_name="Chou",
-    #             age=30,
-    #             height=183.0,
-    #             weight=98.0,
-    #         ),
-    #         Person(
-    #             first_name="Tarou",
-    #             last_name="Yamada",
-    #             age=35,
-    #             height=178.0,
-    #             weight=115.0,
-    #         ),
-    #     ]
-    # )
-
-    # queryset = Person.objects_in(db)
-    # cnt = queryset.filter(Person.age > 30).count()
-    # total = queryset.filter()
-
-    # print(cnt)
-
-    # # for person in total:
-    # #     print(
-    # #         person.first_name,
-    # #         person.last_name,
-    # #         person.age,
-    # #         person.height,
-    # #         person.weight,
-    # #     )
+    print(cnt)
+    print(cnt2)
+    print(cnt3)
 
 
 if __name__ == "__main__":
