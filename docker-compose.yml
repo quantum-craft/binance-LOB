@@ -2,7 +2,7 @@ services:
   clickhouse:
     image: yandex/clickhouse-server
     volumes:
-      - "d:/clickhouse_database:/var/lib/clickhouse"
+      - "d:/database/clickhouse:/var/lib/clickhouse"
     ulimits:
       nofile:
         soft: 262144
