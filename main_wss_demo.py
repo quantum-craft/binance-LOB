@@ -10,10 +10,6 @@ from model import DiffDepthStreamDispatcher, Logger, LoggingLevel
 
 async def wss_demo(url):
     session = aiohttp.ClientSession()
-    prev = 0
-
-    url = "ws://localhost:8765"
-
     while True:
         async with session.ws_connect(url) as ws:
             await ws.send_str('{"hello": "world"}')
