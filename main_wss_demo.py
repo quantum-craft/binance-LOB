@@ -11,11 +11,19 @@ from model import DiffDepthStreamDispatcher, Logger, LoggingLevel
 async def wss_demo(url):
     session = aiohttp.ClientSession()
     prev = 0
+
+    url = "ws://localhost:8765"
+
     while True:
         async with session.ws_connect(url) as ws:
+            await ws.send_str('{"hello": "world"}')
+
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     msg_json = msg.json()
+
+                    await asyncio.sleep(1)
+                    await ws.send_str('{"hello": "world"}')
                 elif msg.type == aiohttp.WSMsgType.PING:
                     print("We got PING !")
                     print(msg.data)
