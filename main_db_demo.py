@@ -37,7 +37,11 @@ def main():
     client.execute("INSERT INTO person VALUES ('Benny', 'Wu', '33', '179', '92')")
     client.execute("INSERT INTO person VALUES ('Benny', 'Wu', '33', '179', '92')")
 
-    qs = Person.objects_in(db).filter(Person.first_name == "Benny").order_by("height")
+    qs = (
+        Person.objects_in(db)
+        .filter(Person.first_name == "Benny")
+        .order_by(Person.height)
+    )
     for benny in qs:
         print(benny.first_name, benny.last_name, benny.age, benny.height, benny.weight)
 
