@@ -12,6 +12,7 @@ from config import CONFIG
 from sortedcontainers import SortedDict
 from itertools import chain
 from dataclasses import dataclass
+import numpy as np
 
 
 def diff_depth_stream_generator(
@@ -543,20 +544,28 @@ if __name__ == "__main__":
         print(block)
         print(block.ending_timestamp - block.beginning_timestamp)
 
-    # total_logic = True
-    # cnt = 0
-    # for asks, bids, book in partial_orderbook_generator(
-    #     last_update_id=0, symbol="USD_F_BTCUSDT"
-    # ):
-    #     manual = []
-    #     for level in range(10):
-    #         manual.append(asks[level][0])
-    #         manual.append(asks[level][1])
-    #         manual.append(bids[level][0])
-    #         manual.append(bids[level][1])
+    cnt = 0
+    x = None
+    for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+        if x is None:
+            x = np.array(book.book, dtype=np.float64).reshape(1, -1)
+        else:
+            x = np.concatenate(
+                (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
+            )
 
-    #     total_logic = total_logic & (manual == book.book)
-    #     cnt = cnt + 1
+    print(x.shape)
+
+    # total_logic = True
+    # manual = []
+    # for level in range(10):
+    #    manual.append(asks[level][0])
+    #    manual.append(asks[level][1])
+    #    manual.append(bids[level][0])
+    #    manual.append(bids[level][1])
+
+    # total_logic = total_logic & (manual == book.book)
+    # cnt = cnt + 1
 
     # print(total_logic)
     # print(cnt)
