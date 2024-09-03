@@ -432,7 +432,7 @@ def partial_orderbook_generator(
         val for (asks, bids) in zip(asks_items, bids_items) for val in chain(asks, bids)
     ]
 
-    yield asks_items, bids_items, PartialBook(
+    yield PartialBook(
         timestamp=timestamp, last_update_id=last_update_id, book=result, symbol=symbol
     )
     prev_final_update_id = None
@@ -495,7 +495,7 @@ def partial_orderbook_generator(
             for val in chain(asks, bids)
         ]
 
-        yield asks_items, bids_items, PartialBook(
+        yield PartialBook(
             timestamp=timestamp,
             last_update_id=final_update_id,
             book=result,
