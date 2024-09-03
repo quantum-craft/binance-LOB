@@ -432,7 +432,7 @@ def partial_orderbook_generator(
         val for (asks, bids) in zip(asks_items, bids_items) for val in chain(asks, bids)
     ]
 
-    yield PartialBook(
+    yield asks_items, bids_items, PartialBook(
         timestamp=timestamp, last_update_id=last_update_id, book=result, symbol=symbol
     )
     prev_final_update_id = None
@@ -495,7 +495,7 @@ def partial_orderbook_generator(
             for val in chain(asks, bids)
         ]
 
-        yield PartialBook(
+        yield asks_items, bids_items, PartialBook(
             timestamp=timestamp,
             last_update_id=final_update_id,
             book=result,
@@ -544,6 +544,7 @@ if __name__ == "__main__":
         print(block.ending_timestamp - block.beginning_timestamp)
 
     # total_logic = True
+    # cnt = 0
     # for asks, bids, book in partial_orderbook_generator(
     #     last_update_id=0, symbol="USD_F_BTCUSDT"
     # ):
@@ -555,5 +556,7 @@ if __name__ == "__main__":
     #         manual.append(bids[level][1])
 
     #     total_logic = total_logic & (manual == book.book)
+    #     cnt = cnt + 1
 
     # print(total_logic)
+    # print(cnt)
