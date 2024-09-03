@@ -2,6 +2,7 @@
 
 Inlcude all useful function and classes for reconstructing orderbook from database
 """
+
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional, Tuple
 from infi.clickhouse_orm.database import Database
@@ -128,6 +129,10 @@ class DataBlock:
             if self.beginning_update_id <= id_ + 1 <= self.ending_update_id
         ]
         self.block_snapshot_ids
+
+        # demo_beginning_datetime = self.beginning_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        # demo_ending_datetime = self.ending_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        # print(demo_beginning_datetime, demo_ending_datetime)
 
     def fetch_partial_book(self, level: int = 10, block_size: int = 5_000):
         """Returns a generator for the partial book
@@ -422,8 +427,9 @@ def partial_orderbook_generator(
     bids_items = bids_book.items()[:level]
     asks_items = asks_book.items()[:level]
 
+    # Asks first then Bids
     result = [
-        val for (bids, asks) in zip(bids_items, asks_items) for val in chain(bids, asks)
+        val for (asks, bids) in zip(asks_items, bids_items) for val in chain(asks, bids)
     ]
 
     yield PartialBook(
@@ -482,10 +488,11 @@ def partial_orderbook_generator(
         bids_items = bids_book.items()[:level]
         asks_items = asks_book.items()[:level]
 
+        # Asks first then Bids
         result = [
             val
-            for (bids, asks) in zip(bids_items, asks_items)
-            for val in chain(bids, asks)
+            for (asks, bids) in zip(asks_items, bids_items)
+            for val in chain(asks, bids)
         ]
 
         yield PartialBook(
@@ -531,7 +538,22 @@ def get_all_symbols() -> List[str]:
 
 
 if __name__ == "__main__":
-    datablocks = get_all_data_blocks("DOGEUSDT", 0)
+    datablocks = get_all_data_blocks("USD_F_BTCUSDT", 0)
     for block in datablocks:
         print(block)
         print(block.ending_timestamp - block.beginning_timestamp)
+
+    # total_logic = True
+    # for asks, bids, book in partial_orderbook_generator(
+    #     last_update_id=0, symbol="USD_F_BTCUSDT"
+    # ):
+    #     manual = []
+    #     for level in range(10):
+    #         manual.append(asks[level][0])
+    #         manual.append(asks[level][1])
+    #         manual.append(bids[level][0])
+    #         manual.append(bids[level][1])
+
+    #     total_logic = total_logic & (manual == book.book)
+
+    # print(total_logic)

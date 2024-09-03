@@ -126,6 +126,7 @@ class DiffDepthStreamDispatcher:
                 symbol=symbol,
             )
         )
+
         if len(self.buffer) >= self.batch_size:
             self.insert_to_db()
 

@@ -1,6 +1,10 @@
 {
     "symbols": [
-        "USD_btcusdt"
+        "ethusdt",
+        "btcusdt",
+        "dogeusdt",
+        "USD_btcusdt",
+        "COIN_btcusd_perp"
     ],
     "full_fetch_interval": 3600,
     "full_fetch_limit": 1000,
