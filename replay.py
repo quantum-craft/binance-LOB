@@ -582,7 +582,7 @@ if __name__ == "__main__":
         #         print(x_scaled_np)
         #         print(x_scaled_skl)
 
-    print(total_logic)
+    # print(total_logic)
 
     # total_logic = True
     # manual = []
