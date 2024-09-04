@@ -13,6 +13,8 @@ from sortedcontainers import SortedDict
 from itertools import chain
 from dataclasses import dataclass
 import numpy as np
+from sklearn.preprocessing import StandardScaler
+import torch
 
 
 def diff_depth_stream_generator(
@@ -546,6 +548,7 @@ if __name__ == "__main__":
 
     cnt = 0
     x = None
+    total_logic = True
     for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
         if x is None:
             x = np.array(book.book, dtype=np.float64).reshape(1, -1)
@@ -554,7 +557,32 @@ if __name__ == "__main__":
                 (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
             )
 
-    print(x.shape)
+        cnt = cnt + 1
+
+        # if cnt % 2000 == 0:
+        #     x_stats = x[cnt - 2000 : cnt, :]
+
+        #     x_mean = np.mean(x_stats, axis=0)
+        #     x_std = np.std(x_stats, axis=0)
+        #     x_scaled_np = (x_stats - x_mean) / x_std
+
+        #     scaler = StandardScaler()
+        #     x_scaled_skl = scaler.fit_transform(x_stats)
+
+        #     total_logic = total_logic & (
+        #         torch.count_nonzero(
+        #             torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
+        #         ).item()
+        #         == 80000
+        #     )
+
+        #     if total_logic == False:
+        #         print(x_std)
+        #         print(x_mean)
+        #         print(x_scaled_np)
+        #         print(x_scaled_skl)
+
+    print(total_logic)
 
     # total_logic = True
     # manual = []
