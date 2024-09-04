@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import torch
+import torch.nn.functional as F
 
 
 def diff_depth_stream_generator(
@@ -558,6 +559,9 @@ if __name__ == "__main__":
             )
 
         cnt = cnt + 1
+
+        if cnt % 1000 == 0:
+            np.savetxt("./data.csv", x)
 
         # if cnt % 2000 == 0:
         #     x_stats = x[cnt - 2000 : cnt, :]
