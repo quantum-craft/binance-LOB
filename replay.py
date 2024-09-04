@@ -3,6 +3,7 @@
 Inlcude all useful function and classes for reconstructing orderbook from database
 """
 
+from datetime import timedelta
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional, Tuple
 from infi.clickhouse_orm.database import Database
@@ -547,44 +548,73 @@ if __name__ == "__main__":
         print(block)
         print(block.ending_timestamp - block.beginning_timestamp)
 
-    cnt = 0
     x = None
-    total_logic = True
-    for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+    for hour in range(1, 10):
+        load_data = np.loadtxt(f"./data/data_hour_{hour}.csv")
         if x is None:
-            x = np.array(book.book, dtype=np.float64).reshape(1, -1)
+            x = load_data
         else:
-            x = np.concatenate(
-                (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
-            )
+            x = np.concatenate((x, load_data))
 
-        cnt = cnt + 1
+    total = True
+    for cnt, book in enumerate(
+        partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT")
+    ):
+        total = total & (np.count_nonzero(x[cnt, :] == book.book) == 40)
 
-        if cnt % 1000 == 0:
-            np.savetxt("./data.csv", x)
+    print(total)
 
-        # if cnt % 2000 == 0:
-        #     x_stats = x[cnt - 2000 : cnt, :]
+    # x = None
+    # prev_timestamp = None
+    # hour = 0
+    # for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+    #     if prev_timestamp is None:
+    #         prev_timestamp = book.timestamp
 
-        #     x_mean = np.mean(x_stats, axis=0)
-        #     x_std = np.std(x_stats, axis=0)
-        #     x_scaled_np = (x_stats - x_mean) / x_std
+    #     if book.timestamp - prev_timestamp > timedelta(hours=1):
+    #         hour = hour + 1
+    #         prev_timestamp = book.timestamp
+    #         np.savetxt(f"./data/data_hour_{hour}.csv", x)
+    #         x = None
 
-        #     scaler = StandardScaler()
-        #     x_scaled_skl = scaler.fit_transform(x_stats)
+    #     if x is None:
+    #         x = np.array(book.book, dtype=np.float64).reshape(1, -1)
+    #     else:
+    #         x = np.concatenate(
+    #             (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
+    #         )
 
-        #     total_logic = total_logic & (
-        #         torch.count_nonzero(
-        #             torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
-        #         ).item()
-        #         == 80000
-        #     )
+    # if x is not None:
+    #     hour = hour + 1
+    #     np.savetxt(f"./data/data_hour_{hour}.csv", x)
 
-        #     if total_logic == False:
-        #         print(x_std)
-        #         print(x_mean)
-        #         print(x_scaled_np)
-        #         print(x_scaled_skl)
+    # cnt = cnt + 1
+
+    # if cnt % 1000 == 0:
+    #     np.savetxt("./data.csv", x)
+
+    # if cnt % 2000 == 0:
+    #     x_stats = x[cnt - 2000 : cnt, :]
+
+    #     x_mean = np.mean(x_stats, axis=0)
+    #     x_std = np.std(x_stats, axis=0)
+    #     x_scaled_np = (x_stats - x_mean) / x_std
+
+    #     scaler = StandardScaler()
+    #     x_scaled_skl = scaler.fit_transform(x_stats)
+
+    #     total_logic = total_logic & (
+    #         torch.count_nonzero(
+    #             torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
+    #         ).item()
+    #         == 80000
+    #     )
+
+    #     if total_logic == False:
+    #         print(x_std)
+    #         print(x_mean)
+    #         print(x_scaled_np)
+    #         print(x_scaled_skl)
 
     # print(total_logic)
 
