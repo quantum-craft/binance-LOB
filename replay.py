@@ -635,5 +635,37 @@ def save_data_hourly_to_file(symbol: str = "USD_F_BTCUSDT"):
             )
 
 
+def calculate_m_plus(mid_price, k):
+    total_logic = True
+
+    m_plus = np.zeros(mid_price.shape[0] - k)
+    for idx, p_t in enumerate(zip(*[mid_price[i:] for i in range(1, k + 1)])):
+        list = np.asarray(p_t, dtype=np.float64)
+        m_plus[idx] = np.sum(list) / k
+
+        sum = 0.0
+        for j in range(1, k + 1):
+            sum = sum + mid_price[idx + j]
+
+        sum = sum / k
+
+        total_logic = total_logic & (np.abs(m_plus[idx] - sum) < 1e-9)
+
+    return m_plus, total_logic
+
+
+def save_m_plus_to_file():
+    ks = [5, 10, 20, 50, 100]
+
+    for k in ks:
+        for hour in range(1, 10):
+            mid_price = np.loadtxt(f"./data/MidPrice/mid_price_hour_{hour}.csv")
+            m_plus, total_logic = calculate_m_plus(mid_price, k)
+
+            m_plus_file = f"./data/MPlus/m_plus_k_{k}_hour_{hour}.csv"
+            np.savetxt(m_plus_file, m_plus)
+            print(total_logic)
+
+
 if __name__ == "__main__":
     pass
