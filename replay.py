@@ -539,95 +539,101 @@ def get_all_symbols() -> List[str]:
     database = CONFIG.db_name
     client = Client(host=CONFIG.host_name)
     client.execute(f"USE {database}")
+
     return [s[0] for s in client.execute("SELECT DISTINCT symbol FROM diffdepthstream")]
 
 
-if __name__ == "__main__":
+def check_saved_data():
+    x = None
+    for hour in range(1, 10):
+        load_data = np.loadtxt(f"./data/X/x_hour_{hour}.csv")
+        if x is None:
+            x = load_data
+        else:
+            x = np.concatenate((x, load_data))
+
+    total = True
+    for cnt, book in enumerate(
+        partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT")
+    ):
+        total = total & (np.count_nonzero(x[cnt, :] == book.book) == 40)
+
+    return total
+
+
+def check_normalisation():
+    cnt = 0
+    x = None
+
+    if cnt % 2000 == 0:
+        x_stats = x[cnt - 2000 : cnt, :]
+
+        x_mean = np.mean(x_stats, axis=0)
+        x_std = np.std(x_stats, axis=0)
+        x_scaled_np = (x_stats - x_mean) / x_std
+
+        scaler = StandardScaler()
+        x_scaled_skl = scaler.fit_transform(x_stats)
+
+        total_logic = total_logic & (
+            torch.count_nonzero(
+                torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
+            ).item()
+            == 80000
+        )
+
+        if total_logic == False:
+            print(x_std)
+            print(x_mean)
+            print(x_scaled_np)
+            print(x_scaled_skl)
+
+    print(total_logic)
+
+
+def print_all_data_blocks_timestamp():
     datablocks = get_all_data_blocks("USD_F_BTCUSDT", 0)
     for block in datablocks:
         print(block)
         print(block.ending_timestamp - block.beginning_timestamp)
 
-    # x = None
-    # for hour in range(1, 10):
-    #     load_data = np.loadtxt(f"./data/x_hour_{hour}.csv")
-    #     if x is None:
-    #         x = load_data
-    #     else:
-    #         x = np.concatenate((x, load_data))
 
-    # total = True
-    # for cnt, book in enumerate(
-    #     partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT")
-    # ):
-    #     total = total & (np.count_nonzero(x[cnt, :] == book.book) == 40)
+def check_pvpv_aabb(book, asks, bids):
+    total_logic = True
+    manual = []
+    for level in range(10):
+        manual.append(asks[level][0])  # price ask
+        manual.append(asks[level][1])  # volume ask
+        manual.append(bids[level][0])  # price bid
+        manual.append(bids[level][1])  # volume bid
 
-    # print(total)
+    total_logic = total_logic & (manual == book.book)
+    cnt = cnt + 1
 
-    # x = None
-    # prev_timestamp = None
-    # hour = 0
-    # for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
-    #     if prev_timestamp is None:
-    #         prev_timestamp = book.timestamp
+    print(total_logic)
 
-    #     if book.timestamp - prev_timestamp > timedelta(hours=1):
-    #         hour = hour + 1
-    #         prev_timestamp = book.timestamp
-    #         np.savetxt(f"./data/x_hour_{hour}.csv", x)
-    #         x = None
 
-    #     if x is None:
-    #         x = np.array(book.book, dtype=np.float64).reshape(1, -1)
-    #     else:
-    #         x = np.concatenate(
-    #             (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
-    #         )
+def save_data_hourly_to_file(symbol: str = "USD_F_BTCUSDT"):
+    x = None
+    prev_timestamp = None
+    hour = 0
+    for book in partial_orderbook_generator(last_update_id=0, symbol=symbol):
+        if prev_timestamp is None:
+            prev_timestamp = book.timestamp
 
-    # if x is not None:
-    #     hour = hour + 1
-    #     np.savetxt(f"./data/x_hour_{hour}.csv", x)
+        if book.timestamp - prev_timestamp > timedelta(hours=1):
+            hour = hour + 1
+            prev_timestamp = book.timestamp
+            np.savetxt(f"./data/x_hour_{hour}.csv", x)
+            x = None
 
-    # cnt = cnt + 1
+        if x is None:
+            x = np.array(book.book, dtype=np.float64).reshape(1, -1)
+        else:
+            x = np.concatenate(
+                (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
+            )
 
-    # if cnt % 1000 == 0:
-    #     np.savetxt("./data.csv", x)
 
-    # if cnt % 2000 == 0:
-    #     x_stats = x[cnt - 2000 : cnt, :]
-
-    #     x_mean = np.mean(x_stats, axis=0)
-    #     x_std = np.std(x_stats, axis=0)
-    #     x_scaled_np = (x_stats - x_mean) / x_std
-
-    #     scaler = StandardScaler()
-    #     x_scaled_skl = scaler.fit_transform(x_stats)
-
-    #     total_logic = total_logic & (
-    #         torch.count_nonzero(
-    #             torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
-    #         ).item()
-    #         == 80000
-    #     )
-
-    #     if total_logic == False:
-    #         print(x_std)
-    #         print(x_mean)
-    #         print(x_scaled_np)
-    #         print(x_scaled_skl)
-
-    # print(total_logic)
-
-    # total_logic = True
-    # manual = []
-    # for level in range(10):
-    #    manual.append(asks[level][0])
-    #    manual.append(asks[level][1])
-    #    manual.append(bids[level][0])
-    #    manual.append(bids[level][1])
-
-    # total_logic = total_logic & (manual == book.book)
-    # cnt = cnt + 1
-
-    # print(total_logic)
-    # print(cnt)
+if __name__ == "__main__":
+    pass
