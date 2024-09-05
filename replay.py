@@ -561,34 +561,23 @@ def check_saved_data():
     return total
 
 
-def check_normalisation():
-    cnt = 0
-    x = None
+def zscore_normalisation():
+    for hour in range(1, 10):
+        x = np.loadtxt(f"./data/X/x_hour_{hour}.csv")
 
-    if cnt % 2000 == 0:
-        x_stats = x[cnt - 2000 : cnt, :]
-
-        x_mean = np.mean(x_stats, axis=0)
-        x_std = np.std(x_stats, axis=0)
-        x_scaled_np = (x_stats - x_mean) / x_std
+        x_mean = np.mean(x, axis=0)
+        x_std = np.std(x, axis=0)
+        x_scaled_np = (x - x_mean) / x_std
 
         scaler = StandardScaler()
-        x_scaled_skl = scaler.fit_transform(x_stats)
+        x_scaled_skl = scaler.fit_transform(x)
 
-        total_logic = total_logic & (
-            torch.count_nonzero(
-                torch.from_numpy(x_scaled_np - x_scaled_skl) == 0.0
-            ).item()
-            == 80000
+        print(
+            np.count_nonzero((x_scaled_np - x_scaled_skl) == 0.0)
+            == x.shape[0] * x.shape[1]
         )
 
-        if total_logic == False:
-            print(x_std)
-            print(x_mean)
-            print(x_scaled_np)
-            print(x_scaled_skl)
-
-    print(total_logic)
+        np.savetxt(f"./data/X/x_zscore_hour_{hour}.csv", x_scaled_np)
 
 
 def print_all_data_blocks_timestamp():
@@ -624,7 +613,7 @@ def save_data_hourly_to_file(symbol: str = "USD_F_BTCUSDT"):
         if book.timestamp - prev_timestamp > timedelta(hours=1):
             hour = hour + 1
             prev_timestamp = book.timestamp
-            np.savetxt(f"./data/x_hour_{hour}.csv", x)
+            np.savetxt(f"./data/X/x_hour_{hour}.csv", x)
             x = None
 
         if x is None:
@@ -633,6 +622,10 @@ def save_data_hourly_to_file(symbol: str = "USD_F_BTCUSDT"):
             x = np.concatenate(
                 (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
             )
+
+    if x is not None:
+        hour = hour + 1
+        np.savetxt(f"./data/X/x_hour_{hour}.csv", x)
 
 
 def calculate_m_plus(mid_price, k):
@@ -659,12 +652,51 @@ def save_m_plus_to_file():
 
     for k in ks:
         for hour in range(1, 10):
-            mid_price = np.loadtxt(f"./data/MidPrice/mid_price_hour_{hour}.csv")
+            mid_price = np.loadtxt(f"./data/MidPrice/mid_price_zscore_hour_{hour}.csv")
             m_plus, total_logic = calculate_m_plus(mid_price, k)
 
-            m_plus_file = f"./data/MPlus/m_plus_k_{k}_hour_{hour}.csv"
+            m_plus_file = f"./data/MPlus/m_plus_zscore_k_{k}_hour_{hour}.csv"
             np.savetxt(m_plus_file, m_plus)
             print(total_logic)
+
+
+def calculate_mid_price():
+    for hour in range(1, 10):
+        x_zscore = np.loadtxt(f"./data/X/x_zscore_hour_{hour}.csv")
+        mid_price_zscore = (x_zscore[:, 0] + x_zscore[:, 2]) / 2
+        np.savetxt(
+            f"./data/MidPrice/mid_price_zscore_hour_{hour}.csv", mid_price_zscore
+        )
+
+
+def calculate_lt():
+    ks = [5, 10, 20, 50, 100]
+    for k in ks:
+        for hour in range(1, 10):
+            mid_price = np.loadtxt(f"./data/MidPrice/mid_price_zscore_hour_{hour}.csv")
+            m_plus = np.loadtxt(f"./data/MPlus/m_plus_zscore_k_{k}_hour_{hour}.csv")
+
+            lt = (m_plus - mid_price[:-k]) / mid_price[:-k]
+
+            np.savetxt(f"./data/Y/lt_zscore_k_{k}_hour_{hour}.csv", lt)
+
+
+def calculate_y(alpha=0.002):
+    ks = [5, 10, 20, 50, 100]
+    for k in ks:
+        for hour in range(1, 10):
+            lt = np.loadtxt(f"./data/Y/lt_zscore_k_{k}_hour_{hour}.csv")
+
+            y = np.zeros_like(lt)
+            for i in range(lt.shape[0]):
+                if lt[i] > alpha:
+                    y[i] = 1
+                elif lt[i] < -alpha:
+                    y[i] = -1
+                else:
+                    y[i] = 0
+
+            np.savetxt(f"./data/Y/y_zscore_k_{k}_hour_{hour}.csv", y)
 
 
 if __name__ == "__main__":
