@@ -543,26 +543,26 @@ def get_all_symbols() -> List[str]:
 
 
 if __name__ == "__main__":
-    # datablocks = get_all_data_blocks("USD_F_BTCUSDT", 0)
-    # for block in datablocks:
-    #     print(block)
-    #     print(block.ending_timestamp - block.beginning_timestamp)
+    datablocks = get_all_data_blocks("USD_F_BTCUSDT", 0)
+    for block in datablocks:
+        print(block)
+        print(block.ending_timestamp - block.beginning_timestamp)
 
-    x = None
-    for hour in range(1, 10):
-        load_data = np.loadtxt(f"./data/x_hour_{hour}.csv")
-        if x is None:
-            x = load_data
-        else:
-            x = np.concatenate((x, load_data))
+    # x = None
+    # for hour in range(1, 10):
+    #     load_data = np.loadtxt(f"./data/x_hour_{hour}.csv")
+    #     if x is None:
+    #         x = load_data
+    #     else:
+    #         x = np.concatenate((x, load_data))
 
-    total = True
-    for cnt, book in enumerate(
-        partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT")
-    ):
-        total = total & (np.count_nonzero(x[cnt, :] == book.book) == 40)
+    # total = True
+    # for cnt, book in enumerate(
+    #     partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT")
+    # ):
+    #     total = total & (np.count_nonzero(x[cnt, :] == book.book) == 40)
 
-    print(total)
+    # print(total)
 
     # x = None
     # prev_timestamp = None
