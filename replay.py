@@ -710,4 +710,20 @@ def calculate_y(alpha=0.002):
 
 
 if __name__ == "__main__":
-    calculate_y(0.000002)
+    # calculate_y(0.000002)
+
+    # prev_book = None
+    # for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+    #     if prev_book is None:
+    #         prev_book = book
+    #     else:
+    #         if book.timestamp < prev_book.timestamp:
+    #             print(book.timestamp, prev_book.timestamp)
+
+    #         prev_book = book
+
+    pass
+    # Google "How to manage a local order book correctly"
+    # Why the first two books are reversed?
+    # https://medium.com/@leroyantonin.pro/using-binance-api-to-reconstruct-order-book-states-for-microstructure-research-1-2-8299da034654
+    # cosume_binance.py
