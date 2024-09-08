@@ -273,7 +273,9 @@ def orderbook_generator(
         return
     snapshot = sql_result.pop(0)
     next_snapshot = sql_result.pop(0) if sql_result else None
+
     client.disconnect()
+
     (
         timestamp,
         last_update_id,
@@ -323,6 +325,7 @@ def orderbook_generator(
             and prev_final_update_id + 1 != first_update_id
         ):
             return
+
         prev_final_update_id = final_update_id
 
         if prev_final_update_id is None and (
@@ -710,8 +713,6 @@ def calculate_y(alpha=0.002):
 
 
 if __name__ == "__main__":
-    # calculate_y(0.000002)
-
     prev_book = None
     for book in orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
         if prev_book is None:
@@ -723,8 +724,8 @@ if __name__ == "__main__":
             prev_book = book
 
     pass
-    # Why the first two books are reversed?
 
-    # 用Transformer/nanoGPT玩玩
+    # Clickhouse 會爆掉 改用 檔案
+    # 用Transformer/nanoGPT玩玩 # 不要用 magic number # calculate_y(0.000002)
     # Diffusion course
     # Deep Reinforcement Learning paper
