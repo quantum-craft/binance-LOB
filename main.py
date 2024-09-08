@@ -28,12 +28,13 @@ class AssetType(Enum):
 class DiffDepthStreamMsg(BaseModel):
     e: str  # Event type
     E: int  # Event time (Unix Epoch ms)
+    T: int  # Transaction time
     s: str  # Symbol
-    U: int  # start update id
-    u: int  # end update id
+    U: int  # First update ID in event
+    u: int  # Final update ID in event
+    pu: Optional[int]  # Final update Id in last stream(ie 'u' in last stream)
     b: List[List[float]]  # bids [price, quantity]
     a: List[List[float]]  # asks [price, quantity]
-    pu: Optional[int]
 
 
 class DepthSnapshotMsg(BaseModel):
@@ -112,8 +113,18 @@ async def handle_depth_stream(
                         first_update_id = data_raw.U
                         final_update_id = data_raw.u
                     else:
+                        print(f"pu+1 {data_raw.pu + 1}")
+                        print(f"U {data_raw.U}")
+                        print(f"u {data_raw.u}")
+                        print(f"ask bids len = {len(data_raw.b) + len(data_raw.a)}")
+                        print(f"u - U = {data_raw.u - data_raw.U}")
+                        print(f"u - (pu+1) = {data_raw.u - (data_raw.pu + 1)}")
+                        print(f"T = {data_raw.T}")
+                        print("=======================")
+
                         first_update_id = data_raw.pu + 1
                         final_update_id = data_raw.u
+
                     bids_quantity = [pairs[1] for pairs in data_raw.b]
                     bids_price = [pairs[0] for pairs in data_raw.b]
                     asks_quantity = [pairs[1] for pairs in data_raw.a]
@@ -131,15 +142,19 @@ async def handle_depth_stream(
                         loop.create_task(
                             get_full_depth(symbol, session, database, asset_type)
                         )
+
                     if (
                         prev_final_update_id
                         and prev_final_update_id + 1 != first_update_id
                     ):
+                        print("prev_u != pu !!!")
                         logger.log_msg(
                             f"LOB dropped for {symbol_full}, refetching full market depth",
                             LoggingLevel.INFO,
                             symbol_full,
                         )
+
+                    prev_final_update_id = final_update_id
 
                     dispatcher.insert(
                         timestamp,
