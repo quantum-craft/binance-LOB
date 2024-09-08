@@ -713,7 +713,7 @@ if __name__ == "__main__":
     # calculate_y(0.000002)
 
     prev_book = None
-    for book in partial_orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+    for book in orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
         if prev_book is None:
             prev_book = book
         else:
@@ -724,9 +724,7 @@ if __name__ == "__main__":
 
     pass
     # Why the first two books are reversed?
-    # Google "How to manage a local order book correctly"
 
-    # cosume_binance.py
     # 用Transformer/nanoGPT玩玩
     # Diffusion course
     # Deep Reinforcement Learning paper
