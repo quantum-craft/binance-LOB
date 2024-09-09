@@ -39,12 +39,13 @@ class DepthSnapshotMsg(BaseModel):
 class DiffDepthStreamMsg(BaseModel):
     e: str  # Event type
     E: int  # Event time (Unix Epoch ms)
+    T: int  # Transaction time
     s: str  # Symbol
-    U: int  # start update id
-    u: int  # end update id
+    U: int  # First update ID in event
+    u: int  # Final update ID in event
+    pu: Optional[int]  # Final update Id in last stream(ie 'u' in last stream)
     b: List[List[float]]  # bids [price, quantity]
     a: List[List[float]]  # asks [price, quantity]
-    pu: Optional[int]
 
 
 async def get_diff_depth_stream(speed: int = 100):
@@ -53,35 +54,48 @@ async def get_diff_depth_stream(speed: int = 100):
 
     session = aiohttp.ClientSession()
 
+    snapshot_interval = 2000  # milliseconds
+
     counter = 0
     list_dict = []
+
+    prev_u = -1
     while True:
         async with session.ws_connect(
             depth_stream_url(symbol, asset_type, speed)
         ) as ws:
+
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     dict = msg.json()
+
+                    if prev_u != -1 and prev_u != dict["pu"]:
+                        print("prev_u != pu !!, we need new snapshot.")
+
+                    prev_u = dict["u"]
+
                     list_dict.append(dict)
 
-                    if len(list_dict) >= 10:
+                    # TODO: open file too often
+                    if len(list_dict) >= 100:
                         for dict in list_dict:
                             with open(
-                                f"DataStreams/diff_depth_stream_{speed}.txt", "a"
+                                f"DataStreams/diff_depth_stream_{speed}ms.txt", "a"
                             ) as f:
                                 json.dump(dict, f)
                                 f.write("\n")
 
                         list_dict = []
 
+                    # TODO: handle the exception
                     # print(DiffDepthStreamMsg(**dict))
                     counter += 1
-                    if (counter % 200) == 0:
+                    if (counter % snapshot_interval) == 0:
                         asyncio.get_event_loop().create_task(
                             get_full_depth_snapshot(
                                 symbol=symbol,
                                 asset_type=asset_type,
-                                counter=int(counter / 200),
+                                counter=int(counter / snapshot_interval),
                             )
                         )
 
@@ -115,7 +129,7 @@ def load_stream_data_from_file(speed: int = 100, lastUpdateId: int = 0):
     events = []
     drops = 0
     prev_u = -1
-    with open(f"DataStreams/diff_depth_stream_{speed}.txt") as f:
+    with open(f"DataStreams/diff_depth_stream_{speed}ms.txt") as f:
         for line in f:
             event_json = json.loads(line)
 
@@ -180,11 +194,9 @@ def full_snapshot():
     symbol = CONFIG.symbols[0][4:]
     asset_type = AssetType.USD_M
 
-    session = aiohttp.ClientSession()
-
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
-        get_full_depth_snapshot(symbol=symbol, session=session, asset_type=asset_type)
+        get_full_depth_snapshot(symbol=symbol, asset_type=asset_type, counter=1)
     )
     # loop.run_forever()
 
@@ -193,7 +205,7 @@ if __name__ == "__main__":
     # diff_depth_stream()
     # full_snapshot()
 
-    for counter in range(1, 47):
+    for counter in range(1, 17):
         lastUpdateId = load_snapshot_data_from_file(counter=counter)
         events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
         print(f"Event length: {len(events)}")
