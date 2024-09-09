@@ -113,14 +113,14 @@ async def handle_depth_stream(
                         first_update_id = data_raw.U
                         final_update_id = data_raw.u
                     else:
-                        print(f"pu+1 {data_raw.pu + 1}")
-                        print(f"U {data_raw.U}")
-                        print(f"u {data_raw.u}")
-                        print(f"ask bids len = {len(data_raw.b) + len(data_raw.a)}")
-                        print(f"u - U = {data_raw.u - data_raw.U}")
-                        print(f"u - (pu+1) = {data_raw.u - (data_raw.pu + 1)}")
-                        print(f"T = {data_raw.T}")
-                        print("=======================")
+                        # print(f"pu+1 {data_raw.pu + 1}")
+                        # print(f"U {data_raw.U}")
+                        # print(f"u {data_raw.u}")
+                        # print(f"ask bids len = {len(data_raw.b) + len(data_raw.a)}")
+                        # print(f"u - U = {data_raw.u - data_raw.U}")
+                        # print(f"u - (pu+1) = {data_raw.u - (data_raw.pu + 1)}")
+                        # print(f"T = {data_raw.T}")
+                        # print("=======================")
 
                         first_update_id = data_raw.pu + 1
                         final_update_id = data_raw.u
@@ -166,8 +166,10 @@ async def handle_depth_stream(
                         asks_price,
                         symbol_full,
                     )
+
                 if msg.type == aiohttp.WSMsgType.CLOSE:
                     break
+
         logger.log_msg(
             f"Connection closed for {symbol_full} stream, retrying.",
             LoggingLevel.INFO,
