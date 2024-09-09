@@ -54,7 +54,8 @@ async def get_diff_depth_stream(speed: int = 100):
 
     session = aiohttp.ClientSession()
 
-    snapshot_interval = 2000  # milliseconds
+    snapshot_interval = 1000  # per 0.1 seconds for 100ms stream
+    diff_stream_to_file_interval = 100  # per 0.1 seconds for 100ms stream
 
     counter = 0
     list_dict = []
@@ -76,19 +77,18 @@ async def get_diff_depth_stream(speed: int = 100):
 
                     list_dict.append(dict)
 
-                    # TODO: open file too often
-                    if len(list_dict) >= 100:
-                        for dict in list_dict:
-                            with open(
-                                f"DataStreams/diff_depth_stream_{speed}ms.txt", "a"
-                            ) as f:
+                    if len(list_dict) >= diff_stream_to_file_interval:
+                        with open(
+                            f"DataStreams/diff_depth_stream_{speed}ms.txt", "a"
+                        ) as f:
+                            for dict in list_dict:
                                 json.dump(dict, f)
                                 f.write("\n")
 
                         list_dict = []
 
-                    # TODO: handle the exception
                     # print(DiffDepthStreamMsg(**dict))
+
                     counter += 1
                     if (counter % snapshot_interval) == 0:
                         asyncio.get_event_loop().create_task(
@@ -96,13 +96,14 @@ async def get_diff_depth_stream(speed: int = 100):
                                 symbol=symbol,
                                 asset_type=asset_type,
                                 counter=int(counter / snapshot_interval),
+                                session=session,
                             )
                         )
 
 
-async def get_full_depth_snapshot(symbol: str, asset_type: AssetType, counter: int):
-    session = aiohttp.ClientSession()
-
+async def get_full_depth_snapshot(
+    symbol: str, asset_type: AssetType, counter: int, session: ClientSession
+):
     limit = CONFIG.full_fetch_limit
     if asset_type == AssetType.SPOT:
         url = f"https://api.binance.com/api/v3/depth?symbol={symbol}&limit={limit}"
@@ -121,8 +122,7 @@ async def get_full_depth_snapshot(symbol: str, asset_type: AssetType, counter: i
             json.dump(resp_json, f)
             f.write("\n")
 
-    session.close()
-    # msg = DepthSnapshotMsg(**resp_json)
+        # msg = DepthSnapshotMsg(**resp_json)
 
 
 def load_stream_data_from_file(speed: int = 100, lastUpdateId: int = 0):
@@ -202,10 +202,9 @@ def full_snapshot():
 
 
 if __name__ == "__main__":
-    # diff_depth_stream()
-    # full_snapshot()
+    diff_depth_stream()
 
-    for counter in range(1, 17):
-        lastUpdateId = load_snapshot_data_from_file(counter=counter)
-        events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
-        print(f"Event length: {len(events)}")
+    # for counter in range(1, 17):
+    #     lastUpdateId = load_snapshot_data_from_file(counter=counter)
+    #     events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
+    #     print(f"Event length: {len(events)}")
