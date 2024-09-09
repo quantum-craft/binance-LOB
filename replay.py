@@ -560,6 +560,7 @@ if __name__ == "__main__":
     pass
 
     # 整理 replay main 能用的部分, 看看google上有沒有壓縮的方法
+    # partial book 在replay裡, Binance似乎有提供 partial book 的websocket stream
     # 用Transformer/nanoGPT玩玩 # 不要用 magic number # calculate_y(0.000002)
     # Diffusion course
     # Deep Reinforcement Learning paper
