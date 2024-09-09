@@ -202,9 +202,9 @@ def full_snapshot():
 
 
 if __name__ == "__main__":
-    diff_depth_stream()
+    # diff_depth_stream()
 
-    # for counter in range(1, 17):
-    #     lastUpdateId = load_snapshot_data_from_file(counter=counter)
-    #     events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
-    #     print(f"Event length: {len(events)}")
+    for counter in range(1, 112):
+        lastUpdateId = load_snapshot_data_from_file(counter=counter)
+        events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
+        print(f"Event length: {len(events)}")
