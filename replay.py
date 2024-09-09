@@ -547,20 +547,20 @@ def get_all_symbols() -> List[str]:
 
 
 if __name__ == "__main__":
-    prev_book = None
-    for book in orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
-        if prev_book is None:
-            prev_book = book
-        else:
-            if book.timestamp < prev_book.timestamp:
-                print(book.timestamp, prev_book.timestamp)
+    # prev_book = None
+    # for book in orderbook_generator(last_update_id=0, symbol="USD_F_BTCUSDT"):
+    #     if prev_book is None:
+    #         prev_book = book
+    #     else:
+    #         if book.timestamp < prev_book.timestamp:
+    #             print(book.timestamp, prev_book.timestamp)
 
-            prev_book = book
+    #         prev_book = book
 
     pass
 
-    # 整理 replay main 能用的部分, 看看google上有沒有壓縮的方法
-    # partial book 在replay裡, Binance似乎有提供 partial book 的websocket stream
+    # 驗證兩個snapshot可以用diff stream重建
+    # 玩一下Binance提供的partial orderbook stream, 看看snapshot + diff stream + partial 跟partial stream一不一樣
     # 用Transformer/nanoGPT玩玩 # 不要用 magic number # calculate_y(0.000002)
     # Diffusion course
     # Deep Reinforcement Learning paper
