@@ -18,13 +18,13 @@ def depth_stream_url(symbol: str, asset_type: AssetType, speed: int) -> str:
     endpoint = f"{symbol}@depth" if speed == 1000 else f"{symbol}@depth@100ms"
 
     if asset_type == AssetType.SPOT:
-        print(f"wss://stream.binance.com:9443/ws/{endpoint}")
+        # print(f"wss://stream.binance.com:9443/ws/{endpoint}")
         return f"wss://stream.binance.com:9443/ws/{endpoint}"
     elif asset_type == AssetType.USD_M:
-        print(f"wss://fstream.binance.com/ws/{endpoint}")
+        # print(f"wss://fstream.binance.com/ws/{endpoint}")
         return f"wss://fstream.binance.com/ws/{endpoint}"
     elif asset_type == AssetType.COIN_M:
-        print(f"wss://dstream.binance.com/ws/{endpoint}")
+        # print(f"wss://dstream.binance.com/ws/{endpoint}")
         return f"wss://dstream.binance.com/ws/{endpoint}"
 
 
@@ -54,7 +54,7 @@ async def get_diff_depth_stream(speed: int = 100):
 
     session = aiohttp.ClientSession()
 
-    snapshot_interval = 1000  # per 0.1 seconds for 100ms stream
+    snapshot_interval = 2000  # per 0.1 seconds for 100ms stream
     diff_stream_to_file_interval = 100  # per 0.1 seconds for 100ms stream
 
     counter = 0
@@ -79,7 +79,8 @@ async def get_diff_depth_stream(speed: int = 100):
 
                     if len(list_dict) >= diff_stream_to_file_interval:
                         with open(
-                            f"DataStreams/diff_depth_stream_{speed}ms.txt", "a"
+                            f"D:/Database/BinanceDataStreams/diff_depth_stream_{speed}ms.txt",
+                            "a",
                         ) as f:
                             for dict in list_dict:
                                 json.dump(dict, f)
@@ -100,6 +101,10 @@ async def get_diff_depth_stream(speed: int = 100):
                             )
                         )
 
+                elif msg.type == aiohttp.WSMsgType.CLOSE:
+                    print("ws connection closed normally")
+                    break
+
 
 async def get_full_depth_snapshot(
     symbol: str, asset_type: AssetType, counter: int, session: ClientSession
@@ -107,18 +112,20 @@ async def get_full_depth_snapshot(
     limit = CONFIG.full_fetch_limit
     if asset_type == AssetType.SPOT:
         url = f"https://api.binance.com/api/v3/depth?symbol={symbol}&limit={limit}"
-        print(url)
+        # print(url)
     elif asset_type == AssetType.USD_M:
         url = f"https://fapi.binance.com/fapi/v1/depth?symbol={symbol}&limit={limit}"
-        print(url)
+        # print(url)
     elif asset_type == AssetType.COIN_M:
         url = f"https://dapi.binance.com/dapi/v1/depth?symbol={symbol}&limit={limit}"
-        print(url)
+        # print(url)
 
     async with session.get(url) as resp:
         resp_json = await resp.json()
 
-        with open(f"DataStreams/depth_snapshot_{counter}.txt", "a") as f:
+        with open(
+            f"D:/Database/BinanceDataStreams/depth_snapshot_{counter}.txt", "a"
+        ) as f:
             json.dump(resp_json, f)
             f.write("\n")
 
@@ -202,9 +209,9 @@ def full_snapshot():
 
 
 if __name__ == "__main__":
-    # diff_depth_stream()
+    diff_depth_stream()
 
-    for counter in range(1, 112):
-        lastUpdateId = load_snapshot_data_from_file(counter=counter)
-        events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
-        print(f"Event length: {len(events)}")
+    # for counter in range(1, 112):
+    #     lastUpdateId = load_snapshot_data_from_file(counter=counter)
+    #     events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
+    #     print(f"Event length: {len(events)}")
