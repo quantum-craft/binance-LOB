@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 from pydantic import BaseSettings, BaseModel
 from typing import Dict, Any, List, Optional
@@ -148,7 +149,7 @@ async def get_full_depth_snapshot(
         # msg = DepthSnapshotMsg(**resp_json)
 
 
-def file_load_stream_data(
+def file_load_diff_stream_data(
     file_path: str = "D:/Database/BinanceDataStreams",
     speed: int = 100,
     lastUpdateId_start: int = 0,
@@ -173,7 +174,8 @@ def file_load_stream_data(
                 continue
 
             U = event_json["U"]
-            # |U --- |snapshot| --- u|
+            # |U --- |snapshot_start| --- u|   until   |U --- |snapshot_end| --- u|
+            #           included                                 excluded
             # The FIRST event to process should have U <= lastUpdateId **AND** u >= lastUpdateId
             if U <= lastUpdateId_start and lastUpdateId_start <= u:
                 print(f"Got the FIRST event to process after {drops} drops...")
@@ -252,64 +254,61 @@ def process_bids_asks_book_for_event(event, bids_book, asks_book):
 
 
 if __name__ == "__main__":
-    # # wss_diff_depth_stream_and_snapshot()
+    wss_diff_depth_stream_and_snapshot()
 
-    snapshots = []
-    for i in range(1, 210):
-        snapshot = file_load_snapshot_data(
-            file_path="D:/Database/BinanceDataStreams", counter=i
-        )
+    # snapshot_1 = file_load_snapshot_data(
+    #     file_path="D:/Database/BinanceDataStreams", counter=1
+    # )
 
-        snapshots.append(snapshot)
+    # snapshot_208 = file_load_snapshot_data(
+    #     file_path="D:/Database/BinanceDataStreams", counter=208
+    # )
 
-    for i, snapshot in enumerate(snapshots):
-        print("Checking snapshot", i)
+    # events = file_load_diff_stream_data(
+    #     file_path="D:/Database/BinanceDataStreams",
+    #     speed=100,
+    #     lastUpdateId_start=snapshot_1["lastUpdateId"],
+    #     lastUpdateId_end=snapshot_208["lastUpdateId"],
+    # )
 
-        if i < len(snapshots) - 2:
-            events = file_load_stream_data(
-                file_path="D:/Database/BinanceDataStreams",
-                speed=100,
-                lastUpdateId_start=snapshots[i]["lastUpdateId"],
-                lastUpdateId_end=snapshots[i + 1]["lastUpdateId"],
-            )
+    # bids_book, asks_book = get_bids_asks_from_snapshot(snapshot_1)
+    # for event in events:
+    #     process_bids_asks_book_for_event(event, bids_book, asks_book)
 
-            bids_book, asks_book = get_bids_asks_from_snapshot(snapshots[i])
-            for event in events:
-                process_bids_asks_book_for_event(event, bids_book, asks_book)
+    # events_2 = file_load_diff_stream_data(
+    #     file_path="D:/Database/BinanceDataStreams",
+    #     speed=100,
+    #     lastUpdateId_start=snapshot_208["lastUpdateId"],
+    #     lastUpdateId_end=sys.maxsize,
+    # )
 
-            events_2 = file_load_stream_data(
-                file_path="D:/Database/BinanceDataStreams",
-                speed=100,
-                lastUpdateId_start=snapshots[i + 1]["lastUpdateId"],
-                lastUpdateId_end=snapshots[i + 2]["lastUpdateId"],
-            )
-            bids_book_2, asks_book_2 = get_bids_asks_from_snapshot(snapshots[i + 1])
-            process_bids_asks_book_for_event(events_2[0], bids_book_2, asks_book_2)
+    # bids_book_2, asks_book_2 = get_bids_asks_from_snapshot(snapshot_208)
+    # process_bids_asks_book_for_event(events_2[0], bids_book_2, asks_book_2)
 
-            prices = []
-            volumes = []
-            for p, v in bids_book.items():
-                prices.append(p)
-                volumes.append(v)
+    # prices = []
+    # volumes = []
+    # for p, v in bids_book.items():
+    #     prices.append(p)
+    #     volumes.append(v)
 
-            prices_2 = []
-            volumes_2 = []
-            for p, v in bids_book_2.items():
-                prices_2.append(p)
-                volumes_2.append(v)
+    # prices_2 = []
+    # volumes_2 = []
+    # for p, v in bids_book_2.items():
+    #     prices_2.append(p)
+    #     volumes_2.append(v)
 
-            check_number = 200
-            prices = prices[:check_number]
-            volumes = volumes[:check_number]
-            prices_2 = prices_2[:check_number]
-            volumes_2 = volumes_2[:check_number]
+    #     check_number = 100
+    #     prices = prices[:check_number]
+    #     volumes = volumes[:check_number]
+    #     prices_2 = prices_2[:check_number]
+    #     volumes_2 = volumes_2[:check_number]
 
-            for i, p in enumerate(prices):
-                if p != prices_2[i]:
-                    print(f"Price not equal at index {i} !!")
+    # for i, p in enumerate(prices):
+    #     if p != prices_2[i]:
+    #         print(f"Price not equal at index {i} !!")
 
-            for i, v in enumerate(volumes):
-                if v != volumes_2[i]:
-                    print(f"Volume not equal at index {i} !!")
+    # for i, v in enumerate(volumes):
+    #     if v != volumes_2[i]:
+    #         print(f"Volume not equal at index {i} !!")
 
-    print("Prices and Volumes are equal !!")
+    # print("Prices and Volumes are equal !!")
