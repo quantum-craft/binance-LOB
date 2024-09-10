@@ -176,13 +176,12 @@ def file_load_stream_data(
             # |U --- |snapshot| --- u|
             # The FIRST event to process should have U <= lastUpdateId **AND** u >= lastUpdateId
             if U <= lastUpdateId_start and lastUpdateId_start <= u:
-                # print(f"Got the FIRST event to process after {drops} drops...")
+                print(f"Got the FIRST event to process after {drops} drops...")
                 pass
 
             events.append(event_json)
 
             if U <= lastUpdateId_end and lastUpdateId_end <= u:
-                # print(f"Got the SECOND event, stop fetching...")
                 return events
 
     return events
@@ -264,6 +263,8 @@ if __name__ == "__main__":
         snapshots.append(snapshot)
 
     for i, snapshot in enumerate(snapshots):
+        print("Checking snapshot", i)
+
         if i < len(snapshots) - 2:
             events = file_load_stream_data(
                 file_path="D:/Database/BinanceDataStreams",
