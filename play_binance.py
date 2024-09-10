@@ -10,24 +10,6 @@ import aiohttp
 from aiohttp import ClientSession
 
 
-def depth_stream_url(symbol: str, asset_type: AssetType, speed: int) -> str:
-    # speed = CONFIG.stream_interval
-    assert speed in (1000, 100), "speed must be 1000 or 100"
-
-    symbol = symbol.lower()
-    endpoint = f"{symbol}@depth" if speed == 1000 else f"{symbol}@depth@100ms"
-
-    if asset_type == AssetType.SPOT:
-        # print(f"wss://stream.binance.com:9443/ws/{endpoint}")
-        return f"wss://stream.binance.com:9443/ws/{endpoint}"
-    elif asset_type == AssetType.USD_M:
-        # print(f"wss://fstream.binance.com/ws/{endpoint}")
-        return f"wss://fstream.binance.com/ws/{endpoint}"
-    elif asset_type == AssetType.COIN_M:
-        # print(f"wss://dstream.binance.com/ws/{endpoint}")
-        return f"wss://dstream.binance.com/ws/{endpoint}"
-
-
 class DepthSnapshotMsg(BaseModel):
     lastUpdateId: int
     bids: List[List[float]]
@@ -46,6 +28,40 @@ class DiffDepthStreamMsg(BaseModel):
     pu: Optional[int]  # Final update Id in last stream(ie 'u' in last stream)
     b: List[List[float]]  # bids [price, quantity]
     a: List[List[float]]  # asks [price, quantity]
+
+
+def check_event_asks_bids_price_repetition(event_json):
+    dict_ask = {"-100": "-100"}
+    for ask in event_json["a"]:
+        if ask[0] in dict_ask:
+            print("Got Ask Price {ask[0]} already !!")
+        else:
+            dict_ask[ask[0]] = ask[1]
+
+    dict_bid = {"-100": "-100"}
+    for bid in event_json["b"]:
+        if bid[0] in dict_bid:
+            print("Got Bid Price {bid[0]} already !!")
+        else:
+            dict_bid[bid[0]] = bid[1]
+
+
+def depth_stream_url(symbol: str, asset_type: AssetType, speed: int) -> str:
+    # speed = CONFIG.stream_interval
+    assert speed in (1000, 100), "speed must be 1000 or 100"
+
+    symbol = symbol.lower()
+    endpoint = f"{symbol}@depth" if speed == 1000 else f"{symbol}@depth@100ms"
+
+    if asset_type == AssetType.SPOT:
+        # print(f"wss://stream.binance.com:9443/ws/{endpoint}")
+        return f"wss://stream.binance.com:9443/ws/{endpoint}"
+    elif asset_type == AssetType.USD_M:
+        # print(f"wss://fstream.binance.com/ws/{endpoint}")
+        return f"wss://fstream.binance.com/ws/{endpoint}"
+    elif asset_type == AssetType.COIN_M:
+        # print(f"wss://dstream.binance.com/ws/{endpoint}")
+        return f"wss://dstream.binance.com/ws/{endpoint}"
 
 
 async def get_diff_depth_stream(speed: int = 100):
@@ -132,72 +148,57 @@ async def get_full_depth_snapshot(
         # msg = DepthSnapshotMsg(**resp_json)
 
 
-def load_stream_data_from_file(speed: int = 100, lastUpdateId: int = 0):
+def file_load_stream_data(
+    file_path: str = "D:/Database/BinanceDataStreams",
+    speed: int = 100,
+    lastUpdateId_1: int = 0,
+    lastUpdateId_2: int = 0,
+):
     events = []
     drops = 0
     prev_u = -1
-    with open(f"DataStreams/diff_depth_stream_{speed}ms.txt") as f:
+    with open(f"{file_path}/diff_depth_stream_{speed}ms.txt") as f:
         for line in f:
             event_json = json.loads(line)
 
             pu = event_json["pu"]
             if prev_u != -1 and pu != prev_u:
-                # While listening to the stream, each new event's pu should be equal to the previous event's u, otherwise initialize the process from step 3.
-                print("Fuck! Incorrect stream !!!!!!")
+                print("Non-continuous stream, need to get new snapshot !!")
 
             u = event_json["u"]
             prev_u = u
-            # Drop any event where u is < lastUpdateId in the snapshot.
-            if u < lastUpdateId:
+
+            if u < lastUpdateId_1:
                 drops += 1
-            else:
-                U = event_json["U"]
-                # U ------ snapshot ------ u
-                if U <= lastUpdateId and u >= lastUpdateId:
-                    # The first processed event should have U <= lastUpdateId**AND**u >= lastUpdateId
-                    print(f"Got event after {drops} drops!!")
-                    print("Got the first event within range !!")
+                continue
 
-                events.append(event_json)
+            U = event_json["U"]
+            # |U --- |snapshot| --- u|
+            # The FIRST processed event should have U <= lastUpdateId **AND** u >= lastUpdateId
+            if U <= lastUpdateId_1 and lastUpdateId_1 <= u:
+                print(f"Got the FIRST event to process after {drops} drops...")
 
-            dict_ask = {"-100": "-100"}
-            for ask in event_json["a"]:
-                if ask[0] in dict_ask:
-                    print("Got Ask price {ask[0]} already !!")
-                else:
-                    dict_ask[ask[0]] = ask[1]
-
-            dict_bid = {"-100": "-100"}
-            for bid in event_json["b"]:
-                if bid[0] in dict_bid:
-                    print("Got Bid price {bid[0]} already !!")
-                else:
-                    dict_bid[bid[0]] = bid[1]
-
-        # my_list = [json.loads(line) for line in f]
-        # print(my_list)
+            events.append(event_json)
 
     return events
 
 
-def load_snapshot_data_from_file(counter: int = 1):
-    with open(f"DataStreams/depth_snapshot_{counter}.txt") as f:
+def file_load_snapshot_data(
+    file_path: str = "D:/Database/BinanceDataStreams", counter: int = 1
+):
+    with open(f"{file_path}/depth_snapshot_{counter}.txt") as f:
+        cnt_line = 0
         for line in f:
             event_json = json.loads(line)
-            lastUpdateId = event_json["lastUpdateId"]
+            cnt_line += 1
 
-    return lastUpdateId
+        if cnt_line > 1:
+            print("More than 1 line in snapshot file.")
 
-
-def diff_depth_stream():
-    loop = asyncio.get_event_loop()
-    task_100 = loop.create_task(get_diff_depth_stream(100))
-    # task_1000 = loop.create_task(get_diff_depth_stream(1000))
-    loop.run_until_complete(asyncio.gather(task_100))
-    loop.run_forever()
+    return event_json
 
 
-def full_snapshot():
+def https_full_snapshot():
     symbol = CONFIG.symbols[0][4:]
     asset_type = AssetType.USD_M
 
@@ -208,10 +209,24 @@ def full_snapshot():
     # loop.run_forever()
 
 
-if __name__ == "__main__":
-    diff_depth_stream()
+def wss_diff_depth_stream_and_snapshot():
+    loop = asyncio.get_event_loop()
+    task_100 = loop.create_task(get_diff_depth_stream(100))
+    # task_1000 = loop.create_task(get_diff_depth_stream(1000))
+    loop.run_until_complete(asyncio.gather(task_100))
+    loop.run_forever()
 
-    # for counter in range(1, 112):
-    #     lastUpdateId = load_snapshot_data_from_file(counter=counter)
-    #     events = load_stream_data_from_file(speed=100, lastUpdateId=lastUpdateId)
-    #     print(f"Event length: {len(events)}")
+
+if __name__ == "__main__":
+    # wss_diff_depth_stream_and_snapshot()
+
+    snapshot = file_load_snapshot_data(
+        file_path="D:/Database/BinanceDataStreams", counter=1
+    )
+
+    file_load_stream_data(
+        file_path="D:/Database/BinanceDataStreams",
+        speed=100,
+        lastUpdateId_1=snapshot["lastUpdateId"],
+        lastUpdateId_2=snapshot["lastUpdateId"],
+    )
