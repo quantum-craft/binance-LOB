@@ -559,7 +559,6 @@ if __name__ == "__main__":
 
     pass
 
-    # 驗證兩個snapshot可以用diff stream重建
     # Diffusion course 最先  要開始摟
     # 玩一下Binance提供的partial orderbook stream, 看看snapshot + diff stream + partial 跟partial stream一不一樣
     # 用Transformer/nanoGPT玩玩 # 不要用 magic number # calculate_y(0.000002)
