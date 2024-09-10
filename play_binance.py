@@ -8,6 +8,7 @@ from main import AssetType
 import asyncio
 import aiohttp
 from aiohttp import ClientSession
+from sortedcontainers import SortedDict
 
 
 class DepthSnapshotMsg(BaseModel):
@@ -81,7 +82,6 @@ async def get_diff_depth_stream(speed: int = 100):
         async with session.ws_connect(
             depth_stream_url(symbol, asset_type, speed)
         ) as ws:
-
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     dict = msg.json()
@@ -151,8 +151,8 @@ async def get_full_depth_snapshot(
 def file_load_stream_data(
     file_path: str = "D:/Database/BinanceDataStreams",
     speed: int = 100,
-    lastUpdateId_1: int = 0,
-    lastUpdateId_2: int = 0,
+    lastUpdateId_start: int = 0,
+    lastUpdateId_end: int = 0,
 ):
     events = []
     drops = 0
@@ -168,21 +168,22 @@ def file_load_stream_data(
             u = event_json["u"]
             prev_u = u
 
-            if u < lastUpdateId_1:
+            if u < lastUpdateId_start:
                 drops += 1
                 continue
 
             U = event_json["U"]
             # |U --- |snapshot| --- u|
-            # The FIRST processed event should have U <= lastUpdateId **AND** u >= lastUpdateId
-            if U <= lastUpdateId_2 and lastUpdateId_2 <= u:
-                print(f"Got the SECOND event, stop fetching...")
-                return events
-
-            if U <= lastUpdateId_1 and lastUpdateId_1 <= u:
-                print(f"Got the FIRST event to process after {drops} drops...")
+            # The FIRST event to process should have U <= lastUpdateId **AND** u >= lastUpdateId
+            if U <= lastUpdateId_start and lastUpdateId_start <= u:
+                # print(f"Got the FIRST event to process after {drops} drops...")
+                pass
 
             events.append(event_json)
+
+            if U <= lastUpdateId_end and lastUpdateId_end <= u:
+                # print(f"Got the SECOND event, stop fetching...")
+                return events
 
     return events
 
@@ -221,22 +222,93 @@ def wss_diff_depth_stream_and_snapshot():
     loop.run_forever()
 
 
+def get_bids_asks_from_snapshot(snapshot):
+    bids_snapshot = snapshot["bids"]
+    bids_book = SortedDict(lambda x: -x, {})
+
+    asks_snapshot = snapshot["asks"]
+    asks_book = SortedDict(lambda x: x, {})
+
+    for p, v in bids_snapshot:
+        bids_book[float(p)] = float(v)
+
+    for p, v in asks_snapshot:
+        asks_book[float(p)] = float(v)
+
+    return bids_book, asks_book
+
+
+def process_bids_asks_book_for_event(event, bids_book, asks_book):
+    for p, v in event["b"]:
+        if float(v) == 0.0000:
+            bids_book.pop(float(p), default=0)
+        else:
+            bids_book[float(p)] = float(v)
+
+    for p, v in event["a"]:
+        if float(v) == 0.0000:
+            asks_book.pop(float(p), default=0)
+        else:
+            asks_book[float(p)] = float(v)
+
+
 if __name__ == "__main__":
-    # wss_diff_depth_stream_and_snapshot()
+    # # wss_diff_depth_stream_and_snapshot()
 
-    snapshot_1 = file_load_snapshot_data(
-        file_path="D:/Database/BinanceDataStreams", counter=1
-    )
+    snapshots = []
+    for i in range(1, 210):
+        snapshot = file_load_snapshot_data(
+            file_path="D:/Database/BinanceDataStreams", counter=i
+        )
 
-    snapshot_2 = file_load_snapshot_data(
-        file_path="D:/Database/BinanceDataStreams", counter=2
-    )
+        snapshots.append(snapshot)
 
-    events = file_load_stream_data(
-        file_path="D:/Database/BinanceDataStreams",
-        speed=100,
-        lastUpdateId_1=snapshot_1["lastUpdateId"],
-        lastUpdateId_2=snapshot_2["lastUpdateId"],
-    )
+    for i, snapshot in enumerate(snapshots):
+        if i < len(snapshots) - 2:
+            events = file_load_stream_data(
+                file_path="D:/Database/BinanceDataStreams",
+                speed=100,
+                lastUpdateId_start=snapshots[i]["lastUpdateId"],
+                lastUpdateId_end=snapshots[i + 1]["lastUpdateId"],
+            )
 
-    print(len(events))
+            bids_book, asks_book = get_bids_asks_from_snapshot(snapshots[i])
+            for event in events:
+                process_bids_asks_book_for_event(event, bids_book, asks_book)
+
+            events_2 = file_load_stream_data(
+                file_path="D:/Database/BinanceDataStreams",
+                speed=100,
+                lastUpdateId_start=snapshots[i + 1]["lastUpdateId"],
+                lastUpdateId_end=snapshots[i + 2]["lastUpdateId"],
+            )
+            bids_book_2, asks_book_2 = get_bids_asks_from_snapshot(snapshots[i + 1])
+            process_bids_asks_book_for_event(events_2[0], bids_book_2, asks_book_2)
+
+            prices = []
+            volumes = []
+            for p, v in bids_book.items():
+                prices.append(p)
+                volumes.append(v)
+
+            prices_2 = []
+            volumes_2 = []
+            for p, v in bids_book_2.items():
+                prices_2.append(p)
+                volumes_2.append(v)
+
+            check_number = 200
+            prices = prices[:check_number]
+            volumes = volumes[:check_number]
+            prices_2 = prices_2[:check_number]
+            volumes_2 = volumes_2[:check_number]
+
+            for i, p in enumerate(prices):
+                if p != prices_2[i]:
+                    print(f"Price not equal at index {i} !!")
+
+            for i, v in enumerate(volumes):
+                if v != volumes_2[i]:
+                    print(f"Volume not equal at index {i} !!")
+
+    print("Prices and Volumes are equal !!")
