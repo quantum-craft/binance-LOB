@@ -175,6 +175,10 @@ def file_load_stream_data(
             U = event_json["U"]
             # |U --- |snapshot| --- u|
             # The FIRST processed event should have U <= lastUpdateId **AND** u >= lastUpdateId
+            if U <= lastUpdateId_2 and lastUpdateId_2 <= u:
+                print(f"Got the SECOND event, stop fetching...")
+                return events
+
             if U <= lastUpdateId_1 and lastUpdateId_1 <= u:
                 print(f"Got the FIRST event to process after {drops} drops...")
 
@@ -220,13 +224,19 @@ def wss_diff_depth_stream_and_snapshot():
 if __name__ == "__main__":
     # wss_diff_depth_stream_and_snapshot()
 
-    snapshot = file_load_snapshot_data(
+    snapshot_1 = file_load_snapshot_data(
         file_path="D:/Database/BinanceDataStreams", counter=1
     )
 
-    file_load_stream_data(
+    snapshot_2 = file_load_snapshot_data(
+        file_path="D:/Database/BinanceDataStreams", counter=2
+    )
+
+    events = file_load_stream_data(
         file_path="D:/Database/BinanceDataStreams",
         speed=100,
-        lastUpdateId_1=snapshot["lastUpdateId"],
-        lastUpdateId_2=snapshot["lastUpdateId"],
+        lastUpdateId_1=snapshot_1["lastUpdateId"],
+        lastUpdateId_2=snapshot_2["lastUpdateId"],
     )
+
+    print(len(events))
