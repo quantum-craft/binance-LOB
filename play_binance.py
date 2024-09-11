@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import argparse
 from pathlib import Path
 from pydantic import BaseSettings, BaseModel
 from typing import Dict, Any, List, Optional
@@ -66,13 +67,57 @@ def depth_stream_url(symbol: str, asset_type: AssetType, speed: int) -> str:
         return f"wss://dstream.binance.com/ws/{endpoint}"
 
 
-async def get_diff_depth_stream(speed: int = 100):
+async def get_partial_depth_stream(
+    file_path: str = f"D:/Database/BinanceDataStreams", speed: int = 100
+):
+    symbol = CONFIG.symbols[0][4:]
+    asset_type = AssetType.USD_M
+    level = 10
+    endpoint = f"{symbol}@depth{level}@{speed}ms"
+    partial_stream_to_file_interval = 100  # per 0.1 seconds for 100ms stream
+
+    session = aiohttp.ClientSession()
+
+    list_dict = []
+    prev_u = -1
+    while True:
+        async with session.ws_connect(f"wss://fstream.binance.com/ws/{endpoint}") as ws:
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    dict = msg.json()
+
+                    if prev_u != -1 and prev_u != dict["pu"]:
+                        print("prev_u != pu !!, we need new snapshot.")
+
+                    prev_u = dict["u"]
+
+                    list_dict.append(dict)
+
+                    if len(list_dict) >= partial_stream_to_file_interval:
+                        with open(
+                            f"{file_path}/partial_depth_stream_{speed}ms.txt",
+                            "a",
+                        ) as f:
+                            for dict in list_dict:
+                                json.dump(dict, f)
+                                f.write("\n")
+
+                        list_dict = []
+
+                elif msg.type == aiohttp.WSMsgType.CLOSE:
+                    print("ws connection closed normally")
+                    break
+
+
+async def get_diff_depth_stream(
+    file_path: str = f"D:/Database/BinanceDataStreams", speed: int = 100
+):
     symbol = CONFIG.symbols[0][4:]
     asset_type = AssetType.USD_M
 
     session = aiohttp.ClientSession()
 
-    snapshot_interval = 2000  # per 0.1 seconds for 100ms stream
+    snapshot_interval = 600  # per 0.1 seconds for 100ms stream
     diff_stream_to_file_interval = 100  # per 0.1 seconds for 100ms stream
 
     counter = 0
@@ -96,7 +141,7 @@ async def get_diff_depth_stream(speed: int = 100):
 
                     if len(list_dict) >= diff_stream_to_file_interval:
                         with open(
-                            f"D:/Database/BinanceDataStreams/diff_depth_stream_{speed}ms.txt",
+                            f"{file_path}/diff_depth_stream_{speed}ms.txt",
                             "a",
                         ) as f:
                             for dict in list_dict:
@@ -124,7 +169,11 @@ async def get_diff_depth_stream(speed: int = 100):
 
 
 async def get_full_depth_snapshot(
-    symbol: str, asset_type: AssetType, counter: int, session: ClientSession
+    symbol: str,
+    asset_type: AssetType,
+    counter: int,
+    session: ClientSession,
+    file_path: str = f"D:/Database/BinanceDataStreams",
 ):
     limit = CONFIG.full_fetch_limit
     if asset_type == AssetType.SPOT:
@@ -141,7 +190,8 @@ async def get_full_depth_snapshot(
         resp_json = await resp.json()
 
         with open(
-            f"D:/Database/BinanceDataStreams/depth_snapshot_{counter}.txt", "a"
+            f"{file_path}/depth_snapshot_{counter}.txt",
+            "a",
         ) as f:
             json.dump(resp_json, f)
             f.write("\n")
@@ -159,6 +209,46 @@ def file_load_diff_stream_data(
     drops = 0
     prev_u = -1
     with open(f"{file_path}/diff_depth_stream_{speed}ms.txt") as f:
+        for line in f:
+            event_json = json.loads(line)
+
+            pu = event_json["pu"]
+            if prev_u != -1 and pu != prev_u:
+                print("Non-continuous stream, need to get new snapshot !!")
+
+            u = event_json["u"]
+            prev_u = u
+
+            if u < lastUpdateId_start:
+                drops += 1
+                continue
+
+            U = event_json["U"]
+            # |U --- |snapshot_start| --- u|   until   |U --- |snapshot_end| --- u|
+            #           included                                 excluded
+            # The FIRST event to process should have U <= lastUpdateId **AND** u >= lastUpdateId
+            if U <= lastUpdateId_start and lastUpdateId_start <= u:
+                print(f"Got the FIRST event to process after {drops} drops...")
+                pass
+
+            events.append(event_json)
+
+            if U <= lastUpdateId_end and lastUpdateId_end <= u:
+                return events
+
+    return events
+
+
+def file_load_partial_stream_data(
+    file_path: str = "D:/Database/BinanceDataStreams",
+    speed: int = 100,
+    lastUpdateId_start: int = 0,
+    lastUpdateId_end: int = 0,
+):
+    events = []
+    drops = 0
+    prev_u = -1
+    with open(f"{file_path}/partial_depth_stream_{speed}ms.txt") as f:
         for line in f:
             event_json = json.loads(line)
 
@@ -215,6 +305,14 @@ def https_full_snapshot():
     # loop.run_forever()
 
 
+def wss_partial_depth_stream():
+    loop = asyncio.get_event_loop()
+    task_100 = loop.create_task(get_partial_depth_stream(100))
+    # task_1000 = loop.create_task(get_diff_depth_stream(1000))
+    loop.run_until_complete(asyncio.gather(task_100))
+    loop.run_forever()
+
+
 def wss_diff_depth_stream_and_snapshot():
     loop = asyncio.get_event_loop()
     task_100 = loop.create_task(get_diff_depth_stream(100))
@@ -254,26 +352,33 @@ def process_bids_asks_book_for_event(event, bids_book, asks_book):
 
 
 if __name__ == "__main__":
-    wss_diff_depth_stream_and_snapshot()
+    # parser = argparse.ArgumentParser(description="Binance Data Stream")
+    # parser.add_argument("-t", "--type")
 
-    # snapshot_1 = file_load_snapshot_data(
-    #     file_path="D:/Database/BinanceDataStreams", counter=1
-    # )
+    # args = parser.parse_args()
 
-    # snapshot_208 = file_load_snapshot_data(
-    #     file_path="D:/Database/BinanceDataStreams", counter=208
-    # )
+    # if args.type == "diff":
+    #     print("Recording DIFF depth stream and snapshot...")
+    #     wss_diff_depth_stream_and_snapshot()
+    # elif args.type == "partial":
+    #     print("Recording PARTIAL depth stream...")
+    #     wss_partial_depth_stream()
 
-    # events = file_load_diff_stream_data(
-    #     file_path="D:/Database/BinanceDataStreams",
-    #     speed=100,
-    #     lastUpdateId_start=snapshot_1["lastUpdateId"],
-    #     lastUpdateId_end=snapshot_208["lastUpdateId"],
-    # )
+    snapshot = file_load_snapshot_data(
+        file_path="D:/Database/BinanceDataStreamsVS_Partial", counter=1
+    )
 
-    # bids_book, asks_book = get_bids_asks_from_snapshot(snapshot_1)
-    # for event in events:
-    #     process_bids_asks_book_for_event(event, bids_book, asks_book)
+    events = file_load_diff_stream_data(
+        file_path="D:/Database/BinanceDataStreamsVS_Partial",
+        speed=100,
+        lastUpdateId_start=snapshot["lastUpdateId"],
+        lastUpdateId_end=sys.maxsize,
+    )
+
+    bids_book, asks_book = get_bids_asks_from_snapshot(snapshot)
+
+    for event in events:
+        process_bids_asks_book_for_event(event, bids_book, asks_book)
 
     # events_2 = file_load_diff_stream_data(
     #     file_path="D:/Database/BinanceDataStreams",
