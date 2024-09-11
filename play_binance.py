@@ -337,6 +337,67 @@ def get_bids_asks_from_snapshot(snapshot):
     return bids_book, asks_book
 
 
+def compare(start_counter: int, end_counter: int):
+    snapshot_start = file_load_snapshot_data(
+        file_path="D:/Database/BinanceDataStreams_2024_09_10", counter=start_counter
+    )
+
+    snapshot_end = file_load_snapshot_data(
+        file_path="D:/Database/BinanceDataStreams_2024_09_10", counter=end_counter
+    )
+
+    events_start_end = file_load_diff_stream_data(
+        file_path="D:/Database/BinanceDataStreams_2024_09_10",
+        speed=100,
+        lastUpdateId_start=snapshot_start["lastUpdateId"],
+        lastUpdateId_end=snapshot_end["lastUpdateId"],
+    )
+
+    bids_book, asks_book = get_bids_asks_from_snapshot(snapshot_start)
+    for event in events_start_end:
+        process_bids_asks_book_for_event(event, bids_book, asks_book)
+
+    events_after_end = file_load_diff_stream_data(
+        file_path="D:/Database/BinanceDataStreams_2024_09_10",
+        speed=100,
+        lastUpdateId_start=snapshot_end["lastUpdateId"],
+        lastUpdateId_end=sys.maxsize,
+    )
+
+    bids_book_compare, asks_book_compare = get_bids_asks_from_snapshot(snapshot_end)
+    process_bids_asks_book_for_event(
+        events_after_end[0], bids_book_compare, asks_book_compare
+    )
+
+    prices = []
+    volumes = []
+    for p, v in bids_book.items():
+        prices.append(p)
+        volumes.append(v)
+
+    prices_compare = []
+    volumes_compare = []
+    for p, v in bids_book_compare.items():
+        prices_compare.append(p)
+        volumes_compare.append(v)
+
+        check_number = 1000
+        prices = prices[:check_number]
+        volumes = volumes[:check_number]
+        prices_compare = prices_compare[:check_number]
+        volumes_compare = volumes_compare[:check_number]
+
+    for i, p in enumerate(prices):
+        if p != prices_compare[i]:
+            print(f"Price not equal at index {i} !!")
+
+    for i, v in enumerate(volumes):
+        if v != volumes_compare[i]:
+            print(f"Volume not equal at index {i} !!")
+
+    print("Prices and Volumes are equal !!")
+
+
 def process_bids_asks_book_for_event(event, bids_book, asks_book):
     for p, v in event["b"]:
         if float(v) == 0.0000:
@@ -364,56 +425,5 @@ if __name__ == "__main__":
     #     print("Recording PARTIAL depth stream...")
     #     wss_partial_depth_stream()
 
-    snapshot = file_load_snapshot_data(
-        file_path="D:/Database/BinanceDataStreamsVS_Partial", counter=1
-    )
-
-    events = file_load_diff_stream_data(
-        file_path="D:/Database/BinanceDataStreamsVS_Partial",
-        speed=100,
-        lastUpdateId_start=snapshot["lastUpdateId"],
-        lastUpdateId_end=sys.maxsize,
-    )
-
-    bids_book, asks_book = get_bids_asks_from_snapshot(snapshot)
-
-    for event in events:
-        process_bids_asks_book_for_event(event, bids_book, asks_book)
-
-    # events_2 = file_load_diff_stream_data(
-    #     file_path="D:/Database/BinanceDataStreams",
-    #     speed=100,
-    #     lastUpdateId_start=snapshot_208["lastUpdateId"],
-    #     lastUpdateId_end=sys.maxsize,
-    # )
-
-    # bids_book_2, asks_book_2 = get_bids_asks_from_snapshot(snapshot_208)
-    # process_bids_asks_book_for_event(events_2[0], bids_book_2, asks_book_2)
-
-    # prices = []
-    # volumes = []
-    # for p, v in bids_book.items():
-    #     prices.append(p)
-    #     volumes.append(v)
-
-    # prices_2 = []
-    # volumes_2 = []
-    # for p, v in bids_book_2.items():
-    #     prices_2.append(p)
-    #     volumes_2.append(v)
-
-    #     check_number = 100
-    #     prices = prices[:check_number]
-    #     volumes = volumes[:check_number]
-    #     prices_2 = prices_2[:check_number]
-    #     volumes_2 = volumes_2[:check_number]
-
-    # for i, p in enumerate(prices):
-    #     if p != prices_2[i]:
-    #         print(f"Price not equal at index {i} !!")
-
-    # for i, v in enumerate(volumes):
-    #     if v != volumes_2[i]:
-    #         print(f"Volume not equal at index {i} !!")
-
-    # print("Prices and Volumes are equal !!")
+    # compare(1, 200)
+    pass
