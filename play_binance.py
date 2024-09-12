@@ -11,6 +11,8 @@ import asyncio
 import aiohttp
 from aiohttp import ClientSession
 from sortedcontainers import SortedDict
+import datetime
+import time
 
 
 class DepthSnapshotMsg(BaseModel):
@@ -123,6 +125,7 @@ async def get_diff_depth_stream(
     counter = 0
     list_dict = []
 
+    start_time = time.time() * 1000
     prev_u = -1
     while True:
         async with session.ws_connect(
@@ -139,9 +142,10 @@ async def get_diff_depth_stream(
 
                     list_dict.append(dict)
 
+                    hour = int((dict["E"] - start_time) / 1000 / 3600)
                     if len(list_dict) >= diff_stream_to_file_interval:
                         with open(
-                            f"{file_path}/diff_depth_stream_{speed}ms.txt",
+                            f"{file_path}/diff_depth_stream_hour_{hour+1}_{speed}ms.txt",
                             "a",
                         ) as f:
                             for dict in list_dict:
@@ -315,7 +319,7 @@ def wss_partial_depth_stream():
 
 def wss_diff_depth_stream_and_snapshot():
     loop = asyncio.get_event_loop()
-    task_100 = loop.create_task(get_diff_depth_stream(100))
+    task_100 = loop.create_task(get_diff_depth_stream(speed=100))
     # task_1000 = loop.create_task(get_diff_depth_stream(1000))
     loop.run_until_complete(asyncio.gather(task_100))
     loop.run_forever()
@@ -426,4 +430,5 @@ if __name__ == "__main__":
     #     wss_partial_depth_stream()
 
     # compare(1, 200)
-    pass
+
+    wss_diff_depth_stream_and_snapshot()
