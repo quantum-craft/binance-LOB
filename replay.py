@@ -559,6 +559,5 @@ if __name__ == "__main__":
 
     pass
 
-    # Diffusion course 最先  要開始摟
     # 用Transformer/nanoGPT玩玩 # 不要用 magic number # calculate_y(0.000002)
     # Deep Reinforcement Learning paper
