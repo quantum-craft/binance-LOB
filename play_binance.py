@@ -232,7 +232,7 @@ def file_load_diff_stream_data(
             #           included                                 excluded
             # The FIRST event to process should have U <= lastUpdateId **AND** u >= lastUpdateId
             if U <= lastUpdateId_start and lastUpdateId_start <= u:
-                print(f"Got the FIRST event to process after {drops} drops...")
+                # print(f"Got the FIRST event to process after {drops} drops...")
                 pass
 
             events.append(event_json)
@@ -341,17 +341,17 @@ def get_bids_asks_from_snapshot(snapshot):
     return bids_book, asks_book
 
 
-def compare(start_counter: int, end_counter: int):
-    snapshot_start = file_load_snapshot_data(
-        file_path="D:/Database/BinanceDataStreams_2024_09_10", counter=start_counter
-    )
+def compare(
+    start_counter: int,
+    end_counter: int,
+    file_path: str = "D:/Database/BinanceDataStreams",
+):
+    snapshot_start = file_load_snapshot_data(file_path=file_path, counter=start_counter)
 
-    snapshot_end = file_load_snapshot_data(
-        file_path="D:/Database/BinanceDataStreams_2024_09_10", counter=end_counter
-    )
+    snapshot_end = file_load_snapshot_data(file_path=file_path, counter=end_counter)
 
     events_start_end = file_load_diff_stream_data(
-        file_path="D:/Database/BinanceDataStreams_2024_09_10",
+        file_path=file_path,
         speed=100,
         lastUpdateId_start=snapshot_start["lastUpdateId"],
         lastUpdateId_end=snapshot_end["lastUpdateId"],
@@ -362,7 +362,7 @@ def compare(start_counter: int, end_counter: int):
         process_bids_asks_book_for_event(event, bids_book, asks_book)
 
     events_after_end = file_load_diff_stream_data(
-        file_path="D:/Database/BinanceDataStreams_2024_09_10",
+        file_path=file_path,
         speed=100,
         lastUpdateId_start=snapshot_end["lastUpdateId"],
         lastUpdateId_end=sys.maxsize,
@@ -429,6 +429,6 @@ if __name__ == "__main__":
     #     print("Recording PARTIAL depth stream...")
     #     wss_partial_depth_stream()
 
-    # compare(1, 200)
+    # compare(1, 205, "D:\Database\BinanceDataStreams_2024_09_10")
 
     wss_diff_depth_stream_and_snapshot()
