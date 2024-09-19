@@ -559,7 +559,5 @@ if __name__ == "__main__":
 
     pass
 
-    # 不要用 magic number # calculate_y(0.000002)
-    # Deep Reinforcement Learning paper
     # 用Transformer/nanoGPT玩玩
     # Vision Transformer paper 找找 Continuous Space Transformer pretraining
