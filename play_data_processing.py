@@ -50,47 +50,6 @@ def print_all_data_blocks_timestamp():
         print(block.ending_timestamp - block.beginning_timestamp)
 
 
-def check_pvpv_aabb(book, asks, bids):
-    total_logic = True
-    manual = []
-    for level in range(10):
-        manual.append(asks[level][0])  # price ask
-        manual.append(asks[level][1])  # volume ask
-        manual.append(bids[level][0])  # price bid
-        manual.append(bids[level][1])  # volume bid
-
-    total_logic = total_logic & (manual == book.book)
-    cnt = cnt + 1
-
-    print(total_logic)
-
-
-def save_data_hourly_to_file(symbol: str = "USD_F_BTCUSDT"):
-    x = None
-    prev_timestamp = None
-    hour = 0
-    for book in partial_orderbook_generator(last_update_id=0, symbol=symbol):
-        if prev_timestamp is None:
-            prev_timestamp = book.timestamp
-
-        if book.timestamp - prev_timestamp > timedelta(hours=1):
-            hour = hour + 1
-            prev_timestamp = book.timestamp
-            np.savetxt(f"./data/X/x_hour_{hour}.csv", x)
-            x = None
-
-        if x is None:
-            x = np.array(book.book, dtype=np.float64).reshape(1, -1)
-        else:
-            x = np.concatenate(
-                (x, np.array(book.book, dtype=np.float64).reshape(1, -1))
-            )
-
-    if x is not None:
-        hour = hour + 1
-        np.savetxt(f"./data/X/x_hour_{hour}.csv", x)
-
-
 def calculate_m_plus(mid_price, k):
     total_logic = True
 
