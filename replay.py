@@ -558,6 +558,3 @@ if __name__ == "__main__":
     #         prev_book = book
 
     pass
-
-    # 用Transformer/nanoGPT玩玩
-    # Vision Transformer paper 找找 Continuous Space Transformer pretraining
